@@ -10,96 +10,119 @@
     <!-- 每周流行 -->
     <home-week-popular />
 
-    <ul>
-      <li>列表1</li>
-      <li>列表2</li>
-      <li>列表3</li>
-      <li>列表4</li>
-      <li>列表5</li>
-      <li>列表6</li>
-      <li>列表7</li>
-      <li>列表8</li>
-      <li>列表9</li>
-      <li>列表10</li>
-      <li>列表11</li>
-      <li>列表12</li>
-      <li>列表13</li>
-      <li>列表14</li>
-      <li>列表15</li>
-      <li>列表16</li>
-      <li>列表17</li>
-      <li>列表18</li>
-      <li>列表19</li>
-      <li>列表20</li>
-      <li>列表21</li>
-      <li>列表22</li>
-      <li>列表23</li>
-      <li>列表24</li>
-      <li>列表25</li>
-      <li>列表26</li>
-      <li>列表27</li>
-      <li>列表28</li>
-      <li>列表29</li>
-      <li>列表30</li>
-      <li>列表31</li>
-      <li>列表32</li>
-      <li>列表33</li>
-      <li>列表34</li>
-      <li>列表35</li>
-      <li>列表36</li>
-      <li>列表37</li>
-      <li>列表38</li>
-      <li>列表39</li>
-      <li>列表40</li>
-      <li>列表41</li>
-      <li>列表42</li>
-      <li>列表43</li>
-      <li>列表44</li>
-      <li>列表45</li>
-      <li>列表46</li>
-      <li>列表47</li>
-      <li>列表48</li>
-      <li>列表49</li>
-      <li>列表50</li>
-    </ul>
-   
+    <!-- tabControl -->
+    <tab-control class="tab-control" :titles="showType"  @tabClick="tabClick"/>
+
+    <!-- 商品列表 -->
+    <good-list :goods="showGoods"/>
+
+    
   </div>
 </template>
 
 <script>
-import NavBar from "components/common/navbar/NavBar";
-import HomeSwiper from "./childcomps/HomeSwiper"
-import HomeRecommendView from "./childcomps/HomeRecommendView"
-import HomeWeekPopular from "./childcomps/HomeWeekPopular"
+import HomeSwiper from "./childcomps/HomeSwiper";
+import HomeRecommendView from "./childcomps/HomeRecommendView";
+import HomeWeekPopular from "./childcomps/HomeWeekPopular";
 
-import { getHomeMultidata } from "network/home";
+import NavBar from "components/common/navbar/NavBar";
+import TabControl from "components/content/tabcontrol/TabControl";
+import GoodList from 'components/content/goodlist/GoodList'
+
+import { getHomeMultidata, getHomeDateGoods } from "network/home";
 
 export default {
   name: "Home",
   data() {
     return {
+      currentType:'pop',
       banners: [],
-      recommends: []
+      recommends: [],
+      goods: {
+        //用于存储后台请求的流行，新款，精品的数据
+        pop: {
+          page: 0,
+          list: []
+        },
+        new: {
+          page: 0,
+          list: []
+        },
+        sell: {
+          page: 0,
+          list: []
+        }
+      }
     };
   },
-  methods: {},
+  computed:{
+    showGoods() { 
+      return this.goods[this.currentType].list
+    },
+    showType() {
+      return ['流行','新款','精选']
+    }
+
+  },
+  methods: {
+    /**
+     * 事件监听的相关方法
+     */
+    tabClick(index) {
+      switch (index) {
+        case 0:
+          this.currentType = 'pop'
+          break;
+        case 1:
+          this.currentType = 'new'
+          break;
+        case 2:
+          this.currentType = 'sell'
+      }
+
+    },
+
+    /**
+     * 网络请求的相关方法
+     */
+    getHomeMultidata() {
+      getHomeMultidata()
+        .then(res => {
+          //将数据存储到组件中，该操作是异步，函数执行完后数据会回收
+          this.banners = res.data.banner.list;
+          this.recommends = res.data.recommend.list;
+          //如何查看该组件有数据了呢？可以查看devtools工具
+        })
+        .catch(err => {
+          console.log(err);
+        });
+    },
+
+    getHomeDateGoods(type) {
+      let page = this.goods[type].page + 1
+      getHomeDateGoods(type, page)
+        .then(res => {
+         this.goods[type].list.push(...res.data.list)
+         this.goods[type].page += 1
+        })
+        .catch(err => {});
+    }
+  },
   components: {
-    NavBar,
     HomeSwiper,
     HomeRecommendView,
-    HomeWeekPopular
+    HomeWeekPopular,
+    NavBar,
+    TabControl,
+    GoodList
   },
   created() {
-    getHomeMultidata()
-      .then(res => {
-        //将数据存储到组件中，该操作是异步，函数执行完后数据会回收
-        this.banners = res.data.banner.list;
-        this.recommends = res.data.recommend.list;
-        //如何查看该组件有数据了呢？可以查看devtools工具
-      })
-      .catch(err => {
-        console.log(err);
-      });
+    //created中不做逻辑处理
+    this.getHomeMultidata() //请求多个数据
+    //请求商品数据
+    this.getHomeDateGoods('pop')
+    this.getHomeDateGoods('new')
+    this.getHomeDateGoods('sell')
   }
 };
 </script>
@@ -116,5 +139,10 @@ export default {
   top: 0;
   z-index: 9;
 }
-
+.tab-control {
+  /* 相当于sticky和fixed结合，浏览器会解析当top为44px时，position会变成fixed */
+  position: sticky;
+  top: 44px;
+  z-index: 9;
+}
 </style>
